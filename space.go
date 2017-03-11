@@ -2,6 +2,7 @@ package main
 
 import (
 	"io"
+	"math"
 	"os"
 
 	"github.com/daved/simpartsim"
@@ -44,12 +45,27 @@ func (s *space) pointStream(ps simpartsim.Particles, frames int) etherdream.Poin
 		}()
 
 		csc := s.run(ps, frames)
+		pts := 0
+		fpts := 0
+		var last *etherdream.Point
+		var err error
 
 		for cs := range csc {
-			if err := dumpInPointStream(w, cs); err != nil {
+			if pts, last, err = dumpInPointStream(w, cs); err != nil {
 				return
 			}
+			fpts = pts
+			times := int(math.Floor(float64(etherdream.FramePoints / pts)))
+			for i := 1; i < times; i++ {
+				if pts, last, err = dumpInPointStream(w, cs); err != nil {
+					return
+				}
+				fpts += pts
+			}
+			//log.Printf("Ran %v - %v times for %v\n", pts, times, fpts)
+			_ = etherdream.NextFrame(w, fpts, *last)
 		}
+		w.Close()
 	}
 
 	return psFn
