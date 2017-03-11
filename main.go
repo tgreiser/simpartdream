@@ -3,10 +3,14 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/daved/simpartsim"
+	"github.com/tgreiser/etherdream"
 )
+
+var scale = flag.Int("scale", 100, "scale factor for ether dream")
 
 func main() {
 	stdout := false
@@ -34,6 +38,20 @@ func main() {
 		}
 	}
 
-	stream := spc.pointStream(ps, frames)
-	_ = stream // remove when var is used
+	pointStream := spc.pointStream(ps, frames)
+
+	addr, _, err := etherdream.FindFirstDAC()
+	if err != nil {
+		log.Fatalf("Network error: %v", err)
+	}
+
+	log.Printf("Found DAC at %v\n", addr)
+
+	dac, err := etherdream.NewDAC(addr.IP.String())
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer dac.Close()
+
+	dac.Play(pointStream)
 }
